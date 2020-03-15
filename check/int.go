@@ -12,18 +12,22 @@ func Int(target int) intchecker {
 	}
 }
 
-func (ic intchecker) IsPositive() bool {
-	return ic.result && ic.target > 0
+func (ic intchecker) IsPositive() intchecker {
+	ic.result = ic.result && ic.target > 0
+	return ic
 }
 
-func (ic intchecker) IsNegative() bool {
-	return ic.result && ic.target < 0
+func (ic intchecker) IsNegative() intchecker {
+	ic.result = ic.result && ic.target < 0
+	return ic
 }
 
-func (ic intchecker) IsZero() bool {
-	return ic.result && ic.target == 0
+func (ic intchecker) IsZero() intchecker {
+	ic.result = ic.result && ic.target == 0
+	return ic
 }
 
-func (ic intchecker) IsInBetween(min, max int) bool {
-	return ic.result && ic.target >= min && ic.target <= max
+func (ic intchecker) IsInBetween(min, max int) intchecker {
+	ic.result = ic.result && ic.target >= min && ic.target <= max
+	return ic
 }
