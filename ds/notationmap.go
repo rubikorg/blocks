@@ -15,7 +15,10 @@ type NotationMap struct {
 
 // NewNotationMap ...
 func NewNotationMap() NotationMap {
-	return NotationMap{editable: true}
+	return NotationMap{
+		m:        make(map[string]interface{}),
+		editable: true,
+	}
 }
 
 // Assign reassigns the holding map `m` inside the struct
