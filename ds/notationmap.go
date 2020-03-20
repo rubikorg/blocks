@@ -49,6 +49,11 @@ func (nm NotationMap) Flatten() NotationMap {
 	}
 }
 
+// Length returns the length of the holding map
+func (nm NotationMap) Length() int {
+	return len(nm.m)
+}
+
 func traverseObjects(target map[string]interface{}, parent string) map[string]interface{} {
 	newSource := make(map[string]interface{})
 
