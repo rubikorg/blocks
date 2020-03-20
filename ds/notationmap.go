@@ -18,6 +18,15 @@ func NewNotationMap(canEdit bool) NotationMap {
 	return NotationMap{}
 }
 
+// Assign reassigns the holding map `m` inside the struct
+func (nm NotationMap) Assign(m map[string]interface{}) error {
+	if nm.editable {
+		nm.m = m
+		return nil
+	}
+	return errors.New("NotationMapAssignError: Cannot assign a non-editable notation map")
+}
+
 // Flatten functions creates a flat map of accessor with dot notations
 func (nm NotationMap) Flatten() NotationMap {
 	final := make(map[string]interface{})
