@@ -49,6 +49,11 @@ func (nm NotationMap) Flatten() NotationMap {
 	}
 }
 
+// Map returns the holding map instance for population
+func (nm NotationMap) Map() map[string]interface{} {
+	return nm.m
+}
+
 // Length returns the length of the holding map
 func (nm NotationMap) Length() int {
 	return len(nm.m)
