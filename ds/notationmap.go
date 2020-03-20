@@ -14,8 +14,8 @@ type NotationMap struct {
 }
 
 // NewNotationMap ...
-func NewNotationMap(canEdit bool) NotationMap {
-	return NotationMap{}
+func NewNotationMap() NotationMap {
+	return NotationMap{editable: true}
 }
 
 // Assign reassigns the holding map `m` inside the struct
@@ -52,6 +52,11 @@ func (nm NotationMap) Flatten() NotationMap {
 // Map returns the holding map instance for population
 func (nm NotationMap) Map() map[string]interface{} {
 	return nm.m
+}
+
+// IsEditable sets status of editable to the value of parameter
+func (nm NotationMap) IsEditable(editable bool) {
+	nm.editable = editable
 }
 
 // Length returns the length of the holding map
