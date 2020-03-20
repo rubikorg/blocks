@@ -8,15 +8,16 @@ import (
 // NotationMap is a type of map structure that can get you the value of a
 // embedded key inside a map
 type NotationMap struct {
-	m        map[string]interface{}
+	m        *map[string]interface{}
 	isFlat   bool
 	editable bool
 }
 
 // NewNotationMap ...
 func NewNotationMap() NotationMap {
+	m := make(map[string]interface{})
 	return NotationMap{
-		m:        make(map[string]interface{}),
+		m:        &m,
 		editable: true,
 	}
 }
@@ -24,17 +25,17 @@ func NewNotationMap() NotationMap {
 // Assign reassigns the holding map `m` inside the struct
 func (nm NotationMap) Assign(m map[string]interface{}) error {
 	if nm.editable {
-		nm.m = m
+		*nm.m = m
 		return nil
 	}
 	return errors.New("NotationMapAssignError: Cannot assign a non-editable notation map")
 }
 
 // Flatten functions creates a flat map of accessor with dot notations
-func (nm NotationMap) Flatten() NotationMap {
+func (nm NotationMap) Flatten() {
 	final := make(map[string]interface{})
 
-	for k, v := range nm.m {
+	for k, v := range *nm.m {
 		if interm, ok := v.(map[string]interface{}); ok {
 			final[k] = interm
 			childs := traverseObjects(interm, k)
@@ -45,16 +46,12 @@ func (nm NotationMap) Flatten() NotationMap {
 
 	}
 
-	return NotationMap{
-		m:        final,
-		editable: nm.editable,
-		isFlat:   true,
-	}
+	*nm.m = final
 }
 
 // Map returns the holding map instance for population
 func (nm NotationMap) Map() map[string]interface{} {
-	return nm.m
+	return *nm.m
 }
 
 // IsEditable sets status of editable to the value of parameter
@@ -64,7 +61,7 @@ func (nm NotationMap) IsEditable(editable bool) {
 
 // Length returns the length of the holding map
 func (nm NotationMap) Length() int {
-	return len(nm.m)
+	return len(*nm.m)
 }
 
 func traverseObjects(target map[string]interface{}, parent string) map[string]interface{} {
@@ -94,18 +91,14 @@ func override(host, source map[string]interface{}) map[string]interface{} {
 
 // Get values of key using dot notations from NotationMap
 func (nm NotationMap) Get(accessor string) interface{} {
-	return nm.m[accessor]
+	return (*nm.m)[accessor]
 }
 
 // Set value of a accessor using dot notations from NotationMap
 func (nm NotationMap) Set(accessor string, value interface{}) error {
 	if nm.editable {
-		nm.m[accessor] = value
+		(*nm.m)[accessor] = value
 		return nil
 	}
 	return errors.New("NotationMapSetError: Cannot edit a non-editable NotationMap")
-}
-
-func noSuchKeyErr(key, acc string) error {
-	return errors.New("no such key: " + key + " for notation: " + acc)
 }
