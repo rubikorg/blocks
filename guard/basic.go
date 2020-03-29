@@ -15,6 +15,10 @@ const (
 	authorizationKey = "Authorization"
 )
 
+func (bg BasicGuard) GetRealm() string {
+	return "Basic realm=\"Restricted\""
+}
+
 func (bg BasicGuard) Authorize(app *rubik.App, header http.Header) error {
 	var config map[string]string
 
