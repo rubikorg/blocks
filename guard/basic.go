@@ -15,6 +15,10 @@ const (
 	authorizationKey = "Authorization"
 )
 
+func (bg BasicGuard) Require() string {
+	return "basicguard"
+}
+
 func (bg BasicGuard) GetRealm() string {
 	return "Basic realm=\"Restricted\""
 }
