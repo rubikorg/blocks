@@ -10,13 +10,11 @@ var messageRoute = r.Route{
 }
 
 var newPunchInRoute = r.Route{
-	Method: r.POST,
-	Path:   "/new/service",
+	Path: "/new/service",
 }
 
 var listServicesRoute = r.Route{
-	Path:       "/list",
-	Controller: listCtl,
+	Path: "/list",
 }
 
 func addRoutes() {

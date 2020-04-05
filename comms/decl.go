@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/gob"
 	"errors"
-	"fmt"
 	"path/filepath"
 	"time"
 
 	"os"
 
+	"github.com/rubikorg/rubik"
 	r "github.com/rubikorg/rubik"
 	bolt "go.etcd.io/bbolt"
 )
@@ -77,14 +77,29 @@ func (bbc BlockBasicComm) OnAttach(app *r.App) error {
 	// is present this will help determin wether to notify of new service or not
 	serviceList, err := bbc.listAndPunchIn(myservice)
 	if err != nil {
-		// fmt.Println("Cannot proceed with the execution of Block:", BlockName, err.Error())
-		panic(err)
-		// return nil
+		return err
 	}
 	bbc.services = serviceList
 
 	// notify your presence to all other servers by calling /new/service
 	// of the client api
+	for _, s := range serviceList {
+		if s.Name == myservice.Name {
+			continue
+		}
+		rubcl := rubik.NewClient(s.Location, 30*time.Second)
+		// when we just want to ping that route saying that a new service has
+		// arrived we use blank request entity
+		be := r.BlankRequestEntity{}
+		be.PointTo = "/_msgp/new/service"
+		go rubcl.Get(be)
+	}
+
+	// add routes that we need for message passing
+	newPunchInRoute.Controller = bbc.newServiceCtl
+	listServicesRoute.Controller = bbc.listCtl
+	msgpRouter.Add(listServicesRoute)
+	r.Use(msgpRouter)
 
 	return nil
 }
@@ -95,82 +110,44 @@ func (bbc BlockBasicComm) Send(target string, data interface{}) error {
 }
 
 func (bbc BlockBasicComm) listAndPunchIn(s service) ([]service, error) {
-	var services []service
-	err := bbc.dbConn.Update(func(tx *bolt.Tx) error {
-		nameKey := []byte("services")
-		listKey := []byte("list")
+	createBucketIfNotExist(bbc.dbConn)
+	services, err := getServiceList(bbc.dbConn)
+	if err != nil {
+		return nil, err
+	}
 
-		b := tx.Bucket(nameKey)
-		if b == nil {
-			var err error
-			b, err = tx.CreateBucket(nameKey)
-			if err != nil {
-				return err
-			}
+	// the for loop makes sure that the execution does not transfer to
+	// the next block if the service name is already present in services list
+	for _, ls := range services {
+		if ls.Name == s.Name {
+			return services, nil
 		}
+	}
 
-		listb := b.Get(listKey)
-		// if there is nothing inside list insert the incoming service
-		if listb == nil {
-			services = append(services, s)
-
-			var buf bytes.Buffer
-			enc := gob.NewEncoder(&buf)
-			err := enc.Encode(services)
-			if err != nil {
-				return err
-			}
-			err = b.Put(listKey, buf.Bytes())
-			if err != nil {
-				return err
-			}
-			return nil
+	// lets append the service
+	services = append(services, s)
+	uerr := bbc.dbConn.Update(func(tx *bolt.Tx) error {
+		var buf bytes.Buffer
+		enc := gob.NewEncoder(&buf)
+		err := enc.Encode(services)
+		if err != nil {
+			return err
 		}
-
-		// if list bytes are not nil then it means that we have some
-		// services punched in before
-		listBuf := bytes.NewBuffer(listb)
-		dec := gob.NewDecoder(listBuf)
-		derr := dec.Decode(&services)
-		if derr != nil {
-			return derr
+		b := tx.Bucket([]byte("services"))
+		perr := b.Put([]byte("list"), buf.Bytes())
+		if perr != nil {
+			return perr
 		}
-		fmt.Println("coming?")
-
-		// the for loop makes sure that the execution does not come here
-		// if the service name is already present in services list
-		for _, ls := range services {
-			if ls.Name == s.Name {
-				return nil
-			}
-		}
-
-		// lets append the service
-		services = append(services, s)
-		bbc.dbConn.Update(func(tx *bolt.Tx) error {
-			var buf bytes.Buffer
-			enc := gob.NewEncoder(&buf)
-			err := enc.Encode(services)
-			if err != nil {
-				return err
-			}
-			b := tx.Bucket([]byte("services"))
-			b.Put([]byte("list"), buf.Bytes())
-			return nil
-		})
 		return nil
 	})
 
-	if err != nil {
-		return nil, err
+	if uerr != nil {
+		return nil, uerr
 	}
 
 	return services, nil
 }
 
 func init() {
-	addRoutes()
-	r.Use(msgpRouter)
-
 	r.Attach(BlockName, BlockBasicComm{})
 }
