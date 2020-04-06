@@ -75,10 +75,11 @@ func (bbc BlockBasicComm) OnAttach(app *r.App) error {
 	// punch-in your attendance in db
 	// get list of all the other local services .. check if the current service
 	// is present this will help determin wether to notify of new service or not
-	serviceList, err := bbc.listAndPunchIn(myservice)
-	if err != nil {
-		return err
+	serviceList, serr := bbc.listAndPunchIn(myservice)
+	if serr != nil {
+		return serr
 	}
+
 	bbc.services = serviceList
 
 	// notify your presence to all other servers by calling /new/service
@@ -99,6 +100,7 @@ func (bbc BlockBasicComm) OnAttach(app *r.App) error {
 	newPunchInRoute.Controller = bbc.newServiceCtl
 	listServicesRoute.Controller = bbc.listCtl
 	msgpRouter.Add(listServicesRoute)
+	msgpRouter.Add(newPunchInRoute)
 	r.Use(msgpRouter)
 
 	return nil

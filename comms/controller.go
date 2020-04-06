@@ -23,6 +23,12 @@ func getServiceList(conn *bolt.DB) ([]service, error) {
 	err := conn.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("services"))
 		listb := b.Get([]byte("list"))
+		// if this is the first time then return no error
+		// and empty service list
+		if listb == nil {
+			return nil
+		}
+
 		buf := bytes.NewBuffer(listb)
 		dec := gob.NewDecoder(buf)
 		err := dec.Decode(&services)
