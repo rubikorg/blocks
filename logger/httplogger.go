@@ -14,30 +14,19 @@ const (
 
 // BlockLogger implements Block interface of rubik
 type BlockLogger struct {
-	config blockLoggerConfig
+	// config blockLoggerConfig
 }
 
-type blockLoggerConfig struct {
-	Level  string `json:"level"`
-	Format string `json:"format"`
-}
+// TODO: make this a simple logger for projects
+// type blockLoggerConfig struct {
+// 	Level  string `json:"level"`
+// 	Format string `json:"format"`
+// }
 
 // OnAttach implementation of rubik block
 func (bl BlockLogger) OnAttach(app *rubik.App) error {
-	var config blockLoggerConfig
-
-	err := app.Decode("logger", &config)
-	if err != nil {
-		return err
-	}
-
-	bl.config = config
-	if config.Format == "" {
-		bl.config.Format = "[%s] Method:%s - [%s] [%d] - %fms"
-	}
 	rubik.BeforeRequest(bl.beforeHook)
 	rubik.AfterRequest(bl.afterHook)
-
 	return nil
 }
 
@@ -50,7 +39,7 @@ func (bl BlockLogger) afterHook(rc *rubik.RequestContext) {
 	responseTime := time.Since(fromTime).Seconds() * 100000
 	layout := "Mon, 2 Jan 2006 15:04:05 MST"
 	logTime := time.Now().Format(layout)
-	logMsg := fmt.Sprintf(bl.config.Format, logTime, rc.Request.Method,
+	logMsg := fmt.Sprintf("[%s] Method:%s - [%s] [%d] - %fms", logTime, rc.Request.Method,
 		rc.Request.URL.Path, rc.Status, responseTime)
 	fmt.Println(logMsg)
 }
