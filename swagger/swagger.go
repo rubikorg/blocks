@@ -1,6 +1,8 @@
 package swagger
 
 import (
+	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/rubikorg/rubik"
@@ -89,11 +91,16 @@ type swagTag struct {
 
 type swagPath map[string]map[string]swagPathInfo
 
+type swagRespDecl struct {
+	Description string `json:"description"`
+	Schema map[string]string `json:"schema"`
+}
 type swagPathInfo struct {
 	Summary string `json:"summary"`
 	Tags []string `json:"tags"`
 	Parameters []swagParams `json:"parameters"`
 	Produces []string `json:"produces"`
+	Responses map[int]swagRespDecl `json:"responses"`
 }
 
 type swagParams struct {
@@ -157,12 +164,25 @@ func insertPaths(ri []rubik.RouteInfo) {
 			method = strings.ToLower(info.Method)
 		}
 
+		responses := make(map[int]swagRespDecl)
+		for status, respType := range info.Responses {
+			fmt.Println(status)
+			resp := swagRespDecl{
+				Description: http.StatusText(status),
+				Schema: map[string]string{
+					"type": respType,
+				},
+			}
+			responses[status] = resp
+		}
+
 		pathInfo := map[string]swagPathInfo{
 			method: swagPathInfo{
 				Tags: []string{belongsTo},
 				Summary: info.Description,
 				Parameters: []swagParams{},
 				Produces: []string{"application/json"},
+				Responses: responses,
 			},
 		}
 		response.Paths[info.Path] = pathInfo
@@ -193,6 +213,12 @@ var htmlRoute = rubik.Route{
 var jsonRoute = rubik.Route{
 	Path: "/docs/swagger.json",
 	Description: "Servers the RouteTree of Rubik as Swagger JSON",
+	Middlewares: []rubik.Middleware{
+		func(req rubik.Request) interface{} {
+			req.ResponseHeader.Set("Access-Control-Allow-Origin", "*")
+			return nil
+		},
+	},
 }
 
 func init() {
