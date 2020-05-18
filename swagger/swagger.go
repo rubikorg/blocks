@@ -1,7 +1,6 @@
 package swagger
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -17,7 +16,7 @@ var html = `
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>Rubik Swagger Block</title>
+    <title>Swagger | Rubik</title>
     <link rel="stylesheet" type="text/css" href="http://localhost:5000/static/swagger-ui.css" >
     <link rel="icon" type="image/png" href="https://rubikorg.github.io/img/icon.png" sizes="32x32" />
     <link rel="icon" type="image/png" href="https://rubikorg.github.io/img/icon.png" sizes="16x16" />
@@ -75,55 +74,59 @@ var html = `
 `
 
 // BlockSwagger is the swagger code block for Rubik server
-type BlockSwagger struct {}
+type BlockSwagger struct{}
 
 var response = swagResponse{
 	Swagger: "2.0",
-	Info: &info{},
-	Tags: []swagTag{},
-	Paths: make(swagPath),
+	Info:    &info{},
+	Tags:    []swagTag{},
+	Paths:   make(swagPath),
+	Schemes: []string{"http", "https"},
 }
 
 type swagTag struct {
-	Name string `json:"name"`
+	Name        string `json:"name"`
 	Description string `json:"description"`
 }
 
 type swagPath map[string]map[string]swagPathInfo
 
 type swagRespDecl struct {
-	Description string `json:"description"`
-	Schema map[string]string `json:"schema"`
+	Description string            `json:"description"`
+	Schema      map[string]string `json:"schema"`
 }
 type swagPathInfo struct {
-	Summary string `json:"summary"`
-	Tags []string `json:"tags"`
-	Parameters []swagParams `json:"parameters"`
-	Produces []string `json:"produces"`
-	Responses map[int]swagRespDecl `json:"responses"`
+	Summary    string               `json:"summary"`
+	Tags       []string             `json:"tags"`
+	Parameters []swagParams         `json:"parameters"`
+	Produces   []string             `json:"produces"`
+	Responses  map[int]swagRespDecl `json:"responses"`
 }
 
 type swagParams struct {
-	Name string `json:"name"`
-	In string `json:"in"`
+	Name        string `json:"name"`
+	In          string `json:"in"`
 	Description string `json:"description"`
-	Required bool `json:"required"`
-	Type string `json:"type"`
-	Format string `json:"format"`
+	Required    bool   `json:"required"`
+	Type        string `json:"type"`
+	Format      string `json:"format"`
 }
 
 type swagResponse struct {
-	Info *info `json:"info"`
-	Swagger string `json:"swagger"`
-	Host string `json:"host"`
-	Tags []swagTag `json:"tags"`
-	Paths swagPath `json:"paths"`
+	Info    *info     `json:"info"`
+	Swagger string    `json:"swagger"`
+	Host    string    `json:"host"`
+	Tags    []swagTag `json:"tags"`
+	Paths   swagPath  `json:"paths"`
+	Schemes []string  `json:"schemes"`
 }
 
 // Info is the info block of swagger guideline response
 type info struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
+	Version     string `json:"version"`
+	Terms       string `json:"termsOfService"`
 }
 
 type swaggerEn struct {
@@ -166,7 +169,6 @@ func insertPaths(ri []rubik.RouteInfo) {
 
 		responses := make(map[int]swagRespDecl)
 		for status, respType := range info.Responses {
-			fmt.Println(status)
 			resp := swagRespDecl{
 				Description: http.StatusText(status),
 				Schema: map[string]string{
@@ -178,11 +180,11 @@ func insertPaths(ri []rubik.RouteInfo) {
 
 		pathInfo := map[string]swagPathInfo{
 			method: swagPathInfo{
-				Tags: []string{belongsTo},
-				Summary: info.Description,
+				Tags:       []string{belongsTo},
+				Summary:    info.Description,
 				Parameters: []swagParams{},
-				Produces: []string{"application/json"},
-				Responses: responses,
+				Produces:   []string{"application/json"},
+				Responses:  responses,
 			},
 		}
 		response.Paths[info.Path] = pathInfo
@@ -196,7 +198,7 @@ func insertSwaggerTags(rl map[string]string) {
 			name = "index"
 		}
 		t := swagTag{
-			Name: name,
+			Name:        name,
 			Description: v,
 		}
 		response.Tags = append(response.Tags, t)
@@ -206,22 +208,18 @@ func insertSwaggerTags(rl map[string]string) {
 var swaggerRouter = rubik.Create("/rubik")
 
 var htmlRoute = rubik.Route{
-	Path: "/docs",
+	Path:        "/docs",
 	Description: "Servers the HTML body for Rubik Swagger Documentation",
 }
 
 var jsonRoute = rubik.Route{
-	Path: "/docs/swagger.json",
+	Path:        "/docs/swagger.json",
 	Description: "Servers the RouteTree of Rubik as Swagger JSON",
-	Middlewares: []rubik.Middleware{
-		func(req rubik.Request) interface{} {
-			req.ResponseHeader.Set("Access-Control-Allow-Origin", "*")
-			return nil
-		},
-	},
 }
 
 func init() {
+	swaggerRouter.Description = "Swagger Implementation of Rubik - [@codekidX](https://github.com/codekidX)"
+
 	block := BlockSwagger{}
 
 	jsonRoute.Controller = block.serve
