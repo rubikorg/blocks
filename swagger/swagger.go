@@ -73,9 +73,6 @@ var html = `
 </html>
 `
 
-// BlockSwagger is the swagger code block for Rubik server
-type BlockSwagger struct{}
-
 var response = swagResponse{
 	Swagger: "2.0",
 	Info:    &info{},
@@ -84,55 +81,20 @@ var response = swagResponse{
 	Schemes: []string{"http", "https"},
 }
 
-type swagTag struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
+var swaggerRouter = rubik.Create("/rubik")
+
+var htmlRoute = rubik.Route{
+	Path:        "/docs",
+	Description: "Serves the HTML body for Rubik Swagger Documentation",
 }
 
-type swagPath map[string]map[string]swagPathInfo
-
-type swagRespDecl struct {
-	Description string            `json:"description"`
-	Schema      map[string]string `json:"schema"`
-}
-type swagPathInfo struct {
-	Summary    string               `json:"summary"`
-	Tags       []string             `json:"tags"`
-	Parameters []swagParams         `json:"parameters"`
-	Produces   []string             `json:"produces"`
-	Responses  map[int]swagRespDecl `json:"responses"`
+var jsonRoute = rubik.Route{
+	Path:        "/docs/swagger.json",
+	Description: "Serves the RouteTree of Rubik as Swagger JSON",
 }
 
-type swagParams struct {
-	Name        string `json:"name"`
-	In          string `json:"in"`
-	Description string `json:"description"`
-	Required    bool   `json:"required"`
-	Type        string `json:"type"`
-	Format      string `json:"format"`
-}
-
-type swagResponse struct {
-	Info    *info     `json:"info"`
-	Swagger string    `json:"swagger"`
-	Host    string    `json:"host"`
-	Tags    []swagTag `json:"tags"`
-	Paths   swagPath  `json:"paths"`
-	Schemes []string  `json:"schemes"`
-}
-
-// Info is the info block of swagger guideline response
-type info struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Version     string `json:"version"`
-	Terms       string `json:"termsOfService"`
-}
-
-type swaggerEn struct {
-	rubik.Entity
-	AppURL string
-}
+// BlockSwagger is the swagger code block for Rubik server
+type BlockSwagger struct{}
 
 // OnAttach implementation of swagger
 func (bs BlockSwagger) OnAttach(app *rubik.App) error {
@@ -203,18 +165,6 @@ func insertSwaggerTags(rl map[string]string) {
 		}
 		response.Tags = append(response.Tags, t)
 	}
-}
-
-var swaggerRouter = rubik.Create("/rubik")
-
-var htmlRoute = rubik.Route{
-	Path:        "/docs",
-	Description: "Serves the HTML body for Rubik Swagger Documentation",
-}
-
-var jsonRoute = rubik.Route{
-	Path:        "/docs/swagger.json",
-	Description: "Serves the RouteTree of Rubik as Swagger JSON",
 }
 
 func init() {
