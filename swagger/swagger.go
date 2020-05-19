@@ -209,12 +209,12 @@ var swaggerRouter = rubik.Create("/rubik")
 
 var htmlRoute = rubik.Route{
 	Path:        "/docs",
-	Description: "Servers the HTML body for Rubik Swagger Documentation",
+	Description: "Serves the HTML body for Rubik Swagger Documentation",
 }
 
 var jsonRoute = rubik.Route{
 	Path:        "/docs/swagger.json",
-	Description: "Servers the RouteTree of Rubik as Swagger JSON",
+	Description: "Serves the RouteTree of Rubik as Swagger JSON",
 }
 
 func init() {
