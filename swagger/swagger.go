@@ -179,7 +179,7 @@ func insertPaths(ri []rubik.RouteInfo) {
 		}
 
 		pathInfo := map[string]swagPathInfo{
-			method: swagPathInfo{
+			method: {
 				Tags:       []string{belongsTo},
 				Summary:    info.Description,
 				Parameters: []swagParams{},
