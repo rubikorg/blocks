@@ -1,5 +1,7 @@
 package swagger
 
+import r "github.com/rubikorg/rubik"
+
 type swagTag struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
@@ -46,6 +48,6 @@ type info struct {
 }
 
 type swaggerEn struct {
-	rubik.Entity
+	r.Entity
 	AppURL string
 }

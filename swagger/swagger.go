@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/rubikorg/rubik"
+	r "github.com/rubikorg/rubik"
 )
 
 // BlockName is the name of this rubik block
@@ -81,14 +81,14 @@ var response = swagResponse{
 	Schemes: []string{"http", "https"},
 }
 
-var swaggerRouter = rubik.Create("/rubik")
+var swaggerRouter = r.Create("/rubik")
 
-var htmlRoute = rubik.Route{
+var htmlRoute = r.Route{
 	Path:        "/docs",
 	Description: "Serves the HTML body for Rubik Swagger Documentation",
 }
 
-var jsonRoute = rubik.Route{
+var jsonRoute = r.Route{
 	Path:        "/docs/swagger.json",
 	Description: "Serves the RouteTree of Rubik as Swagger JSON",
 }
@@ -97,7 +97,7 @@ var jsonRoute = rubik.Route{
 type BlockSwagger struct{}
 
 // OnAttach implementation of swagger
-func (bs BlockSwagger) OnAttach(app *rubik.App) error {
+func (bs BlockSwagger) OnAttach(app *r.App) error {
 	err := app.Decode("swagger", response.Info)
 	if err != nil {
 		return err
@@ -109,15 +109,15 @@ func (bs BlockSwagger) OnAttach(app *rubik.App) error {
 	return nil
 }
 
-func (bs BlockSwagger) serve(en interface{}) rubik.ByteResponse {
-	return rubik.Success(response, rubik.Type.JSON)
+func (bs BlockSwagger) serve(en interface{}) r.ByteResponse {
+	return r.Success(response, r.Type.JSON)
 }
 
-func (bs BlockSwagger) servePage(en interface{}) rubik.ByteResponse {
-	return rubik.Success(html, rubik.Type.HTML)
+func (bs BlockSwagger) servePage(en interface{}) r.ByteResponse {
+	return r.Success(html, r.Type.HTML)
 }
 
-func insertPaths(ri []rubik.RouteInfo) {
+func insertPaths(ri []r.RouteInfo) {
 	for _, info := range ri {
 		method := "get"
 		belongsTo := "index"
@@ -176,7 +176,7 @@ func init() {
 	htmlRoute.Controller = block.servePage
 	swaggerRouter.Add(jsonRoute)
 	swaggerRouter.Add(htmlRoute)
-	rubik.Use(swaggerRouter)
+	r.Use(swaggerRouter)
 
-	rubik.AttachAfter(BlockName, block)
+	r.AttachAfter(BlockName, block)
 }
