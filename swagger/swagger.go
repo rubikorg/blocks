@@ -17,7 +17,7 @@ var html = `
   <head>
     <meta charset="UTF-8">
     <title>Swagger | Rubik</title>
-    <link rel="stylesheet" type="text/css" href="http://localhost:5000/static/swagger-ui.css" >
+    <link rel="stylesheet" type="text/css" href="https://rubik.ashishshekar.com/static/swagger-ui.css" >
     <link rel="icon" type="image/png" href="https://rubikorg.github.io/img/icon.png" sizes="32x32" />
     <link rel="icon" type="image/png" href="https://rubikorg.github.io/img/icon.png" sizes="16x16" />
     <style>
@@ -46,8 +46,8 @@ var html = `
   <body>
     <div id="swagger-ui"></div>
 
-    <script src="http://localhost:5000/static/swagger-ui-bundle.js"> </script>
-    <script src="http://localhost:5000/static/swagger-ui-standalone-preset.js"> </script>
+    <script src="https://rubik.ashishshekar.com/static/swagger-ui-bundle.js"> </script>
+    <script src="https://rubik.ashishshekar.com/static/swagger-ui-standalone-preset.js"> </script>
     <script>
     window.onload = function() {
       // Begin Swagger UI call region
