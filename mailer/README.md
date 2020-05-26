@@ -8,9 +8,9 @@ This is a wrapper block implementation of
 ```toml
 [mailer]
 auth = true
-host = rubik.ashishshekar.com
-username = someuser@email.com
-password = some_secret_password
+host = "rubik.ashishshekar.com"
+username = "someuser@email.com"
+password = "some_secret_password"
 ```
 
 ### Import
@@ -31,6 +31,7 @@ import (
 
 func ctl(en interface{}) r.ByteResponse {
     d := mailer.Details{
+        To: []string{"ashishshekar15@gmail.com"},
         Subject: "Hello",
         Body: "World",
     }
