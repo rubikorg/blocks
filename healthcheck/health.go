@@ -3,24 +3,27 @@ package healthcheck
 import (
 	"strings"
 
+	"github.com/rubikorg/rubik"
 	r "github.com/rubikorg/rubik"
 )
 
+// BlockName is the name of this block
 const BlockName = "HealthCheck"
 
+// BlockHealthCheck creates /health route for you and is used
+// on service health checkers like kubernetes etc ..
 type BlockHealthCheck struct {
 	customPath string
 }
 
 var hcRoute = r.Route{
-	Path:       "/health",
-	Controller: hcCtl,
+	Path: "/health",
+	Controller: func(req *rubik.Request) {
+		return req.Respond("ok")
+	},
 }
 
-func hcCtl(en interface{}) r.ByteResponse {
-	return r.Success("ok", r.Type.Text)
-}
-
+// OnAttach implementation for healthcheck block
 func (hc BlockHealthCheck) OnAttach(app *r.App) error {
 	conf := app.Config("healthcheck")
 	if conf == nil {
