@@ -13,6 +13,8 @@ github.com/rubikorg/rubik v0.0.0-20200320142558-622c411be4d2 h1:LBJA3HsFmTTKBzUX
 github.com/rubikorg/rubik v0.0.0-20200320142558-622c411be4d2/go.mod h1:C6FosWVP314zYfxUJyqXv/9S6eHGwua2pPHOhLIc9UI=
 github.com/rubikorg/rubik v0.0.0-20200530203613-7087986886cc h1:ujBhKKKF/VMDDcC2jM+SrDpJ4uJGvZukzV6jfOV42CU=
 github.com/rubikorg/rubik v0.0.0-20200530203613-7087986886cc/go.mod h1:C6FosWVP314zYfxUJyqXv/9S6eHGwua2pPHOhLIc9UI=
+github.com/rubikorg/rubik v0.0.0-20200601011723-1a305bdacac5 h1:sPXyiPKpk2J1Ihp02zpapFDSabm6BDMSaa4ZXctov2Q=
+github.com/rubikorg/rubik v0.0.0-20200601011723-1a305bdacac5/go.mod h1:C6FosWVP314zYfxUJyqXv/9S6eHGwua2pPHOhLIc9UI=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 go.etcd.io/bbolt v1.3.4 h1:hi1bXHMVrlQh6WwxAy+qZCV/SYIlqo+Ushwdpa4tAKg=
 go.etcd.io/bbolt v1.3.4/go.mod h1:G5EMThwa9y8QZGBClrRx5EY+Yw9kAhnjy3bSjsnlVTQ=
