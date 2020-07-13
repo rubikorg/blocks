@@ -6,31 +6,33 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/rubikorg/rubik"
+	r "github.com/rubikorg/rubik"
 )
 
-type BasicGuard struct{}
+type BasicGuard struct {
+	config guardConfig
+}
+
+type guardConfig struct {
+	username string
+	password string
+}
 
 const (
 	authorizationKey = "Authorization"
+	BlockName        = "BasicGuard"
 )
 
-func (bg BasicGuard) Require() string {
-	return "basicguard"
-}
-
-func (bg BasicGuard) GetRealm() string {
-	return "Basic realm=\"Restricted\""
-}
-
-func (bg BasicGuard) Authorize(app *rubik.App, header http.Header) error {
-	var config map[string]string
-
-	err := app.Decode("basicguard", &config)
+func (bg BasicGuard) OnAttach(app *r.App) error {
+	err := app.Decode("config", &bg.config)
 	if err != nil {
 		return err
 	}
-	if config["username"] == "" || config["password"] == "" {
+	return nil
+}
+
+func (bg BasicGuard) BasicAuthGuard(header http.Header) error {
+	if bg.config.username == "" || bg.config.password == "" {
 		return errors.New("BasicGuard: requires you to specify username & password inside" +
 			"[basicguard] object of your config")
 	}
@@ -51,9 +53,13 @@ func (bg BasicGuard) Authorize(app *rubik.App, header http.Header) error {
 		return errors.New("Malformed Basic header.")
 	}
 
-	if decData[0] != config["username"] || config["password"] != decData[1] {
+	if decData[0] != bg.config.username || bg.config.password != decData[1] {
 		return errors.New("Authorization failure!")
 	}
 
 	return nil
+}
+
+func init() {
+	r.Attach(BlockName, BasicGuard{})
 }
