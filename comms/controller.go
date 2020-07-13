@@ -45,24 +45,23 @@ func getServiceList(conn *bolt.DB) ([]service, error) {
 	return services, nil
 }
 
-func (bbc BlockBasicComm) listCtl(en interface{}) r.ByteResponse {
+func (bbc BlockBasicComm) listCtl(req *r.Request) {
 	services, err := getServiceList(bbc.dbConn)
 
 	if err != nil {
-		return r.Failure(500, err, r.Type.JSON)
+		req.Throw(500, err, r.Type.JSON)
 	}
-
-	return r.Success(services, r.Type.JSON)
+	req.Respond(services, r.Type.JSON)
 }
 
-func (bbc BlockBasicComm) newServiceCtl(en interface{}) r.ByteResponse {
+func (bbc BlockBasicComm) newServiceCtl(req *r.Request) {
 	services, err := getServiceList(bbc.dbConn)
 
 	if err != nil {
-		return r.Failure(500, err, r.Type.JSON)
+		req.Throw(500, err, r.Type.JSON)
 	}
 
 	// we just query the db and save the new list to our bbc instance
 	bbc.services = services
-	return r.Success("success")
+	req.Respond("success")
 }

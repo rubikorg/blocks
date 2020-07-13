@@ -109,12 +109,12 @@ func (bs BlockSwagger) OnAttach(app *r.App) error {
 	return nil
 }
 
-func (bs BlockSwagger) serve(en interface{}) r.ByteResponse {
-	return r.Success(response, r.Type.JSON)
+func (bs BlockSwagger) serve(req *r.Request) {
+	req.Respond(response, r.Type.JSON)
 }
 
-func (bs BlockSwagger) servePage(en interface{}) r.ByteResponse {
-	return r.Success(html, r.Type.HTML)
+func (bs BlockSwagger) servePage(req *r.Request) {
+	req.Respond(html, r.Type.HTML)
 }
 
 func insertPaths(ri []r.RouteInfo) {

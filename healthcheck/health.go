@@ -19,7 +19,7 @@ type BlockHealthCheck struct {
 var hcRoute = r.Route{
 	Path: "/health",
 	Controller: func(req *rubik.Request) {
-		return req.Respond("ok")
+		req.Respond("ok")
 	},
 }
 
