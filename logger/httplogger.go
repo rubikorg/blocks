@@ -36,11 +36,11 @@ func (bl BlockLogger) beforeHook(hc *rubik.HookContext) {
 
 func (bl BlockLogger) afterHook(hc *rubik.HookContext) {
 	fromTime, _ := hc.Ctx["from"].(time.Time)
-	responseTime := time.Since(fromTime).Seconds() * 100000
+	respTime := time.Since(fromTime)
 	layout := "Mon, 2 Jan 2006 15:04:05 MST"
 	logTime := time.Now().Format(layout)
-	logMsg := fmt.Sprintf("[%s] Method:%s - [%s] [%d] - %fms", logTime, hc.Request.Method,
-		hc.Request.URL.Path, hc.Status, responseTime)
+	logMsg := fmt.Sprintf("[%s] Method:%s - [%s] [%d] - [Exec:%v]", logTime, hc.Request.Method,
+		hc.Request.URL.Path, hc.Status, respTime)
 	fmt.Println(logMsg)
 }
 
