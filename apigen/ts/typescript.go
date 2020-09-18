@@ -1,9 +1,14 @@
 package apigen
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"text/template"
@@ -11,10 +16,12 @@ import (
 
 	tsGen "github.com/rubikorg/blocks/apigen/ts/templates"
 	r "github.com/rubikorg/rubik"
+	"github.com/rubikorg/rubik/pkg"
 )
 
 type config struct {
-	outFolder string
+	OutDir    string `json:"out_dir"`
+	CompileJS bool   `json:"compile_js"`
 }
 
 // TSExtBlock generates typescript client code from Rubik routes
@@ -22,10 +29,21 @@ type TSExtBlock struct {
 	conf config
 }
 
+var conf config
+
 // OnPlug satisfies the rubik.ExtentionBlock interface
 func (TSExtBlock) OnPlug(app *r.App) error {
-	var templateData = make(map[string]*tsGen.TypescriptTemplate)
+	err := app.Decode("sdk_ts", &conf)
+	if err != nil {
+		return err
+	}
 
+	// if no out dir specifies rubik workspace
+	if conf.OutDir == "" {
+		conf.OutDir = filepath.Join("..", "..", "apigen", "ts")
+	}
+
+	var templateData = make(map[string]*tsGen.TypescriptTemplate)
 	for router := range app.RouteTree.RouterList {
 		var name string
 		if router == "" {
@@ -60,8 +78,7 @@ func (TSExtBlock) OnPlug(app *r.App) error {
 				tsRoute.Name = "root"
 			} else {
 				tsRoute.Name = uncapitalize(
-					strings.ReplaceAll(
-						handleDotRoutePath(route.Path), "/", ""))
+					replaceURLPathAsName(route.Path))
 			}
 
 			if route.Method == "" {
@@ -107,18 +124,51 @@ func (TSExtBlock) OnPlug(app *r.App) error {
 		}
 	}
 
-	// TOOD: replace stdout with file buffer
+	outDir := conf.OutDir
+
+	// if you want to compile to js
+	if conf.CompileJS {
+		// check if tsc is installed globally
+		if _, err := exec.LookPath("tsc"); err != nil {
+			return errors.New("Please install `tsc` as a global executable using: `npm i -g tsc`")
+		}
+
+		// create a outDir inside rubik cache
+		outDir = filepath.Join(pkg.MakeAndGetCacheDirPath(), "apigen_ts")
+		if f, _ := os.Stat(outDir); f == nil {
+			os.MkdirAll(outDir, 0755)
+		}
+	}
+
+	if f, _ := os.Stat(conf.OutDir); f == nil {
+		os.MkdirAll(conf.OutDir, 0755)
+	}
+
 	// all router files and it's APIs
+	var buf bytes.Buffer
 	for file, data := range templateData {
-		fmt.Println("File: ", file, "=>")
+		// if there is no routes in this router continue
+		if len(data.Routes) == 0 {
+			continue
+		}
+
 		tmpl, err := template.New("api_file").Parse(tsGen.APITemplate)
 		if err != nil {
 			return err
 		}
 
-		if err := tmpl.Execute(os.Stdout, *data); err != nil {
+		if err := tmpl.Execute(&buf, *data); err != nil {
 			return err
 		}
+
+		fileName := fmt.Sprintf("%s-route.ts", strings.ToLower(file))
+		filePath := filepath.Join(outDir, fileName)
+		err = ioutil.WriteFile(filePath, buf.Bytes(), 0755)
+		if err != nil {
+			return err
+		}
+
+		buf.Reset()
 	}
 
 	// env file
@@ -127,11 +177,40 @@ func (TSExtBlock) OnPlug(app *r.App) error {
 		return err
 	}
 
-	if err := tmpl.Execute(os.Stdout, struct{ URL string }{app.CurrentURL}); err != nil {
+	if err := tmpl.Execute(&buf, struct{ URL string }{app.CurrentURL}); err != nil {
 		return err
 	}
 
-	// types file can be written as is
+	// env file
+	err = ioutil.WriteFile(filepath.Join(outDir, "rubik-env.ts"), buf.Bytes(), 0755)
+
+	// all the files which does not need template data to be passed
+	for name, tplData := range tsGen.TSFileMap {
+		err = ioutil.WriteFile(filepath.Join(outDir, name), []byte(tplData), 0755)
+		if err != nil {
+			return err
+		}
+	}
+
+	if conf.CompileJS {
+		fmt.Println("Compiling Typescript project to Javascript...")
+		cmd := exec.Command("tsc", fmt.Sprintf("%s/*.ts", outDir), "--outDir", conf.OutDir)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+
+		fmt.Println("Cleaning up...")
+		if err := os.RemoveAll(outDir); err != nil {
+			return err
+		}
+	}
+
+	fmt.Printf(`
+Generated HTTP Request for your curresponding Rubik service:
+
+path: %s
+dependencies:
+"axios"`, conf.OutDir)
 
 	return nil
 }
@@ -153,17 +232,28 @@ func capitalize(field string) string {
 	return string(r)
 }
 
-func handleDotRoutePath(path string) string {
+func replaceURLPathAsName(path string) string {
 	var r []rune
 	var foundDot = false
+	var foundColon = false
 	for _, p := range path {
+		if p == '/' {
+			continue
+		}
 		if p == '.' {
 			foundDot = true
+			continue
+		}
+		if p == ':' {
+			foundColon = true
 			continue
 		}
 		if foundDot {
 			r = append(r, unicode.ToUpper(p))
 			foundDot = false
+		} else if foundColon {
+			r = append(r, unicode.ToUpper(p))
+			foundColon = false
 		} else {
 			r = append(r, p)
 		}

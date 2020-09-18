@@ -34,6 +34,7 @@ type TsRoute struct {
 	Name       string
 	Method     string
 	EntityName string
+	Form       []Pair
 	Body       []Pair
 	Query      []Pair
 	Param      []Pair
@@ -56,19 +57,27 @@ type EnvFile struct {
 // which are to be written with no template variables, these files
 // tend to be helper files or type definitions for TS lang
 var TSFileMap = map[string]string{
-	"rubik-env.ts":        ENVTemplate,
 	"types.ts":            TypesTemplate,
 	"rubik-api-helper.ts": APIHelperTemplate,
 }
 
 // APITemplate is the constant router file which defines a single
 // router in TS which corresponds to rubik.Router
-const APITemplate = `import { doRequest } from './rubik-api-helper.ts';
-import { env } from './rubik-env.ts';
-import { ApiOptions } from './types.ts';
-import { encode } from 'qs'; 
+const APITemplate = `import { doRequest } from './rubik-api-helper';
+import { env } from './rubik-env';
+import { Entity } from './types';
+import { AxiosResponse } from "axios";
 {{range $route := .Routes }}
-interface {{ $route.EntityName }} {
+export interface {{ $route.EntityName }} extends Entity {
+	{{- if not $route.Form }}
+	form?: any,
+	{{- else }}
+	form: {
+	{{- range $bodyElem := $route.Form }}
+		{{ $bodyElem.Key }}{{- if $bodyElem.IsOptional }}?{{- end }}: {{ $bodyElem.Type }},
+	{{- end }}
+	},
+	{{- end }}
 	{{- if not $route.Body }}
 	body?: any,
 	{{- else }}
@@ -101,36 +110,114 @@ interface {{ $route.EntityName }} {
 // @class {{ .RouterName }}Api
 export class {{ .RouterName }}Api {
 {{ range $route := .Routes }}
-	public static {{ $route.Name }}(payload: {{ $route.EntityName }}, opts: ApiOptions): Promise<any> {
-		return doRequest('{{ $route.Method }}', env.url + {{ $route.FullPath }}, opts);
+	public static {{ $route.Name }}(entity: {{ $route.EntityName }}): Promise<AxiosResponse> {
+		return doRequest<{{ $route.EntityName }}>('{{ $route.Method }}', env.url + "{{ $route.FullPath }}", entity);
 	}
 {{ end }}
 }
 `
 
 // ENVTemplate is the template for rubik-env.ts file
-const ENVTemplate = `
-export const env = {
+const ENVTemplate = `export const env = {
 	url: '{{ .URL }}',
 };
 `
 
 // TypesTemplate includes all types required for TS SDK
-const TypesTemplate = `
-export interface AuthOptions {
-	basic: {
-		username: string,
-		password: string
-	},
-	jwt: string
+const TypesTemplate = `export interface Entity {
+	query?: any;
+	body?: any;
+	form?: any;
+	param?: any;
+	auth?: {
+		basic: {
+			username: string,
+			password: string
+		},
+		jwt: string
+	}
 }
 `
 
 // APIHelperTemplate implements the HTTP methods for Rubik TS SDK
-const APIHelperTemplate = `
-import { ApiOptions } from './types.ts';
+const APIHelperTemplate = `import { Entity } from "./types";
+import axios from "axios";
+import { encode } from "qs";
 
-export function doRequest(method: string, opts?: AuthOptions): Promise<any> {
-	return Promise.resolve({});
+export async function doRequest<T extends Entity>(
+	method: "GET" | "POST" | "PUT" | "DELETE",
+	path: string,
+	entity: T
+): Promise<any> {
+	switch (method) {
+		case "GET":
+			return getRequest(path, entity);
+		case "POST":
+			return postRequest(path, entity);
+		case "PUT":
+			return putRequest(path, entity);
+		case "DELETE":
+			return deleteRequest(path, entity);
+		default:
+			break;
+	}
+}
+
+function getRequest<T extends Entity>(path: string, entity: T): Promise<any> {
+	// TODO: we can improve this by staticly analyzing while creating template
+	let finalPath = path;
+	if (Object.keys(entity.param).length > 0) {
+		// then we have some path params to be passed and replaced in url path
+		Object.keys(entity.param).forEach((k) => {
+			finalPath = finalPath.replace(":" + k, entity.param[k]);
+		});
+	}
+
+	if (Object.keys(entity.query).length > 0) {
+		const encodedQuery = encode(entity.query);
+		finalPath += "?" + encodedQuery;
+	}
+
+	if (Object.keys(entity.body).length > 0) {
+		console.log("[Rubik] Cannot embed body in a GET request");
+	}
+
+	return axios.get(finalPath);
+}
+
+function evalRequestData(path: string, entity: Entity): [string, any] {
+	let finalPath = path;
+	// TODO: we can improve this by staticly analyzing while creating template
+	if (Object.keys(entity.param).length > 0) {
+		// then we have some path params to be passed and replaced in url path
+		Object.keys(entity.param).forEach((k) => {
+			finalPath = finalPath.replace(":" + k, entity.param[k]);
+		});
+	}
+
+	if (Object.keys(entity.query).length > 0) {
+		const encodedQuery = encode(entity.query);
+		finalPath += "?" + encodedQuery;
+	}
+
+	return [finalPath, entity.body];
+}
+
+function postRequest<T extends Entity>(path: string, entity: T): Promise<any> {
+	const [finalPath, data] = evalRequestData(path, entity);
+	return axios.post(finalPath, data);
+}
+
+function putRequest<T extends Entity>(path: string, entity: T): Promise<any> {
+	const [finalPath, data] = evalRequestData(path, entity);
+	return axios.put(finalPath, data);
+}
+
+function deleteRequest<T extends Entity>(
+	path: string,
+	entity: T
+): Promise<any> {
+	const [finalPath, data] = evalRequestData(path, entity);
+	return axios.delete(finalPath, data);
 }
 `
