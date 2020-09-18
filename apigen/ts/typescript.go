@@ -206,7 +206,7 @@ func (TSExtBlock) OnPlug(app *r.App) error {
 	}
 
 	fmt.Printf(`
-Generated HTTP Request for your curresponding Rubik service:
+Generated HTTP Request for your corresponding Rubik service:
 
 path: %s
 dependencies:
