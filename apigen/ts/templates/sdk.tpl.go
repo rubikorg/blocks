@@ -18,35 +18,6 @@ package templates
 // 	auth: AuthOptions
 // }
 
-// Pair is the object key: type values for { interface }
-// definitions in TS
-type Pair struct {
-	Key        string
-	IsOptional bool
-	Type       string
-}
-
-// TsRoute is the route information for single route
-// in the list of rubik.Router
-type TsRoute struct {
-	FullPath   string
-	Path       string
-	Name       string
-	Method     string
-	EntityName string
-	Form       []Pair
-	Body       []Pair
-	Query      []Pair
-	Param      []Pair
-}
-
-// TypescriptTemplate is the rubik.Router -> Api Class
-// definition in TS
-type TypescriptTemplate struct {
-	RouterName string
-	Routes     []TsRoute
-}
-
 // EnvFile is the settings and environment related
 // values provider for Rubik SDK files
 type EnvFile struct {

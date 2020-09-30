@@ -5,15 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"text/template"
-	"unicode"
 
+	"github.com/rubikorg/blocks/apigen/sdkdist"
 	tsGen "github.com/rubikorg/blocks/apigen/ts/templates"
 	r "github.com/rubikorg/rubik"
 	"github.com/rubikorg/rubik/pkg"
@@ -24,105 +23,27 @@ type config struct {
 	CompileJS bool   `json:"compile_js"`
 }
 
-// TSExtBlock generates typescript client code from Rubik routes
-type TSExtBlock struct {
-	conf config
-}
+// TSGenPlugin generates typescript client code from Rubik routes
+type TSGenPlugin struct{}
 
 var conf config
 
 // OnPlug satisfies the rubik.ExtentionBlock interface
-func (TSExtBlock) OnPlug(app *r.App) error {
-	err := app.Decode("sdk_ts", &conf)
-	if err != nil {
-		return err
-	}
-
-	// if no out dir specifies rubik workspace
-	if conf.OutDir == "" {
+func (TSGenPlugin) OnPlug(app *r.App) error {
+	// if --args is empty
+	if app.Args == "" {
+		// default path
 		conf.OutDir = filepath.Join("..", "..", "apigen", "ts")
-	}
-
-	var templateData = make(map[string]*tsGen.TypescriptTemplate)
-	for router := range app.RouteTree.RouterList {
-		var name string
-		if router == "" {
-			name = "Index"
+	} else {
+		// split the args into consumable map. format - out=./out_dir,
+		if out := sdkdist.MapPluginArgs(app.Args)["out"]; out != "" {
+			conf.OutDir = out
 		} else {
-			name = capitalize(strings.ReplaceAll(router, "/", ""))
-		}
-		templateData[name] = &tsGen.TypescriptTemplate{
-			RouterName: name,
-			Routes:     []tsGen.TsRoute{},
+			return errors.New("out option not specified in args. please add out=$DIR in --args")
 		}
 	}
 
-	for _, route := range app.RouteTree.Routes {
-		var tsRoute tsGen.TsRoute
-		var routerName string
-
-		if route.BelongsTo == "" {
-			routerName = "Index"
-		} else {
-			routerName = capitalize(strings.ReplaceAll(route.BelongsTo, "/", ""))
-		}
-
-		target := templateData[routerName]
-
-		if route.Entity != nil {
-			values := reflect.ValueOf(route.Entity)
-			tsRoute.EntityName = capitalize(values.Type().Name())
-			tsRoute.Path = route.Path
-			tsRoute.FullPath = route.FullPath
-			if route.Path == "/" {
-				tsRoute.Name = "root"
-			} else {
-				tsRoute.Name = uncapitalize(
-					replaceURLPathAsName(route.Path))
-			}
-
-			if route.Method == "" {
-				tsRoute.Method = http.MethodGet
-			} else {
-				tsRoute.Method = route.Method
-			}
-			num := values.NumField()
-
-			// add entity data pairs
-			for i := 0; i < num; i++ {
-				field := values.Type().Field(i)
-
-				tag := field.Tag.Get("rubik")
-				key, medium := getRequestField(field.Name, tag)
-				typ := getTsTypeEquivalent(field.Type.Name())
-				if typ == "-1" {
-					continue
-				}
-
-				pair := tsGen.Pair{
-					Key:        key,
-					IsOptional: true,
-					Type:       typ,
-				}
-				switch medium {
-				case "body":
-					tsRoute.Body = append(tsRoute.Body, pair)
-					break
-				case "query":
-					tsRoute.Query = append(tsRoute.Query, pair)
-					break
-				case "param":
-					tsRoute.Param = append(tsRoute.Param, pair)
-					break
-				default:
-					tsRoute.Query = append(tsRoute.Query, pair)
-					break
-				}
-			}
-
-			target.Routes = append(target.Routes, tsRoute)
-		}
-	}
+	var templateData = sdkdist.TransformTree(app.RouteTree, getTsTypeEquivalent)
 
 	outDir := conf.OutDir
 
@@ -216,54 +137,16 @@ dependencies:
 }
 
 // Name mentions the name of the extension to the use
-func (TSExtBlock) Name() string {
+func (TSGenPlugin) Name() string {
 	return "Typescript Client SDK Generator"
 }
 
-func uncapitalize(field string) string {
-	r := []rune(field)
-	r[0] = unicode.ToLower(r[0])
-	return string(r)
-}
-
-func capitalize(field string) string {
-	r := []rune(field)
-	r[0] = unicode.ToUpper(r[0])
-	return string(r)
-}
-
-func replaceURLPathAsName(path string) string {
-	var r []rune
-	var foundDot = false
-	var foundColon = false
-	for _, p := range path {
-		if p == '/' {
-			continue
-		}
-		if p == '.' {
-			foundDot = true
-			continue
-		}
-		if p == ':' {
-			foundColon = true
-			continue
-		}
-		if foundDot {
-			r = append(r, unicode.ToUpper(p))
-			foundDot = false
-		} else if foundColon {
-			r = append(r, unicode.ToUpper(p))
-			foundColon = false
-		} else {
-			r = append(r, p)
-		}
-	}
-
-	return string(r)
+func (TSGenPlugin) RunID() string {
+	return "apigen_ts"
 }
 
 // TODO: need to handle nested structs inside the type
-func getTsTypeEquivalent(goType string, value ...reflect.Value) string {
+func getTsTypeEquivalent(goType string, value reflect.StructField) string {
 	switch goType {
 	case "string":
 		return "string"
@@ -280,33 +163,6 @@ func getTsTypeEquivalent(goType string, value ...reflect.Value) string {
 	}
 }
 
-// getRequestField takes the original field name and rubik struct tag and
-// returns (key_name, medium)
-func getRequestField(ogName string, tag string) (string, string) {
-	// TODO: handle optional entity fields
-	key := uncapitalize(ogName)
-	constTag := strings.ReplaceAll(tag, "!", "")
-	if strings.Contains(constTag, "|") {
-		splitted := strings.Split(constTag, "|")
-		var medium = "query"
-		if splitted[0] != "" {
-			key = splitted[0]
-		}
-
-		if splitted[1] != "" {
-			medium = splitted[1]
-		}
-		return key, medium
-	}
-
-	switch constTag {
-	case "body", "query", "param":
-		return key, constTag
-	default:
-		return key, "query"
-	}
-}
-
 func init() {
-	r.Plug(TSExtBlock{})
+	r.Plug(TSGenPlugin{})
 }
