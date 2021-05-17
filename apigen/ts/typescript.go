@@ -19,7 +19,7 @@ import (
 )
 
 type config struct {
-	OutDir    string `json:"out_dir"`
+	OutDir    string `json:"out"`
 	CompileJS bool   `json:"compile_js"`
 }
 
@@ -30,17 +30,16 @@ var conf config
 
 // OnPlug satisfies the rubik.ExtentionBlock interface
 func (TSGenPlugin) OnPlug(app *r.App) error {
+	err := app.Decode("bind_ts", &conf)
+	if err != nil {
+		return err
+	}
+
 	// if --args is empty
-	if app.Args == "" {
+	if conf.OutDir == "" {
+		fmt.Println("Did not find [bind_ts.out] in your rubik.toml, so generating TS files at $PROJECT/bindings/ts")
 		// default path
-		conf.OutDir = filepath.Join("..", "..", "apigen", "ts")
-	} else {
-		// split the args into consumable map. format - out=./out_dir,
-		if out := sdkdist.MapPluginArgs(app.Args)["out"]; out != "" {
-			conf.OutDir = out
-		} else {
-			return errors.New("out option not specified in args. please add out=$DIR in --args")
-		}
+		conf.OutDir = filepath.Join("..", "..", "bindings", "ts")
 	}
 
 	var templateData = sdkdist.TransformTree(app.RouteTree, getTsTypeEquivalent)
@@ -126,12 +125,13 @@ func (TSGenPlugin) OnPlug(app *r.App) error {
 		}
 	}
 
+	absPath, _ := filepath.Abs(conf.OutDir)
 	fmt.Printf(`
 Generated HTTP Request for your corresponding Rubik service:
 
 path: %s
 dependencies:
-"axios"`, conf.OutDir)
+"axios"\n`, absPath)
 
 	return nil
 }
@@ -141,11 +141,12 @@ func (TSGenPlugin) Name() string {
 	return "Typescript Client SDK Generator"
 }
 
+// RunID for running this plugin from okrubik CLI
 func (TSGenPlugin) RunID() string {
-	return "apigen_ts"
+	return "bind_ts"
 }
 
-// TODO: need to handle nested structs inside the type
+// TODO: need to handle nested struct inside the type
 func getTsTypeEquivalent(goType string, value reflect.StructField) string {
 	switch goType {
 	case "string":

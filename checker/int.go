@@ -3,6 +3,8 @@ package checker
 import (
 	"fmt"
 	"strconv"
+
+	r "github.com/rubikorg/rubik"
 )
 
 func IsZero(val interface{}) error {
@@ -21,4 +23,16 @@ func IsZero(val interface{}) error {
 	}
 
 	return nil
+}
+
+func IntMust(value interface{}) r.Assertion {
+	return func(val interface{}) error {
+		return nil
+	}
+}
+
+func IntIsOneOf(values ...interface{}) r.Assertion {
+	return func(val interface{}) error {
+		return nil
+	}
 }
